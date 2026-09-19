@@ -2,7 +2,7 @@ name: jdc-1.yml
 
 on: 
   release:
-    types: [published]
+    workflow_dispatch:
 #  push:
 #    tags:
 #    - 'v*'
