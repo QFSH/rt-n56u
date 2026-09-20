@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 120
     steps:
     - name: Checkout
@@ -41,13 +41,16 @@ jobs:
         cwd=`pwd`
         CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
         cd trunk
-        # 预下载go，绕过失效的gomirrors.org
+        # ========== 预下载go，绕过失效的gomirrors.org ==========
         mkdir -p tools/go
         GO_FILE="go1.15.2.linux-amd64.tar.gz"
         GO_URL="https://dl.google.com/go/$GO_FILE"
         if [ ! -f "tools/go/$GO_FILE" ];then
           curl -L $GO_URL -o "tools/go/$GO_FILE"
         fi
+        # 跳过openssl html文档安装，规避软链接批量创建失败
+        sed -i '/install_html/d' package/openssl/Makefile
+        # ========================================================
         for m in $TNAME;
         do
         if [ ! -f configs/templates/$m.config ] ; then
@@ -103,10 +106,18 @@ jobs:
         ####################################################################################
         sed -i "s/^CONFIG_TOOLCHAIN_DIR=.*$/CONFIG_TOOLCHAIN_DIR=${CONFIG_TOOLCHAIN_DIR}/g" .config
         sudo ./clear_tree_simple
-        sudo ./build_firmware_modify $m 0
+        # 输出全部日志保存到build.log，开启bash -x调试
+        sudo bash -x ./build_firmware_modify $m 0 > build.log 2>&1
         sudo mv -f images/*.trx /opt/images/
         done
         df -h
+
+    - name: Upload build log on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: trunk/build.log
 
     - name: Disk usage on failure
       if: failure()
