@@ -14,7 +14,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install unzip libtool-bin curl cmake gperf gawk flex bison nano xxd fakeroot \
         cpio git python3-docutils gettext automake autopoint texinfo build-essential help2man \
-        pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget
+        pkg-config zlib1g-dev libgmp3-dev libmpc-dev libmpfr-dev libncurses5-dev libltdl-dev wget libdbus-1-dev
     - name: Clone source code
       run: |
         cd toolchain-mipsel
@@ -27,8 +27,14 @@ jobs:
         cwd=`pwd`
         CONFIG_TOOLCHAIN_DIR=${cwd//\//\\\/}\\/toolchain-mipsel
         cd trunk
-        # 修复失效go下载地址
-        sed -i 's|https://gomirrors.org/dl/go/go1.15.2.linux-amd64.tar.gz|https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz|g' tools/Makefile
+        # ========== 预下载go，直接绕过Makefile的gomirrors下载 ==========
+        mkdir -p tools/go
+        GO_FILE="go1.15.2.linux-amd64.tar.gz"
+        GO_URL="https://dl.google.com/go/$GO_FILE"
+        if [ ! -f "tools/go/$GO_FILE" ];then
+          curl -L $GO_URL -o "tools/go/$GO_FILE"
+        fi
+        # ===============================================================
         for m in $TNAME;
         do
         if [ ! -f configs/templates/$m.config ] ; then
